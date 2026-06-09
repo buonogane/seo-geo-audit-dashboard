@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SEO & GEO Audit Dashboard</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f5;color:#1a1a1a;min-height:100vh}
+.container{max-width:1100px;margin:0 auto;padding:2rem 1.5rem}
+h1{font-size:20px;font-weight:500;margin-bottom:4px}
+.subtitle{font-size:13px;color:#666;margin-bottom:2rem}
+.upload-zone{border:1.5px dashed #ccc;border-radius:12px;padding:2.5rem;text-align:center;cursor:pointer;background:#fff;transition:border-color .2s;margin-bottom:2rem}
+.upload-zone:hover{border-color:#888}
+.upload-icon{font-size:32px;color:#aaa;margin-bottom:8px}
+.upload-title{font-weight:500;margin-bottom:4px}
+.upload-sub{font-size:13px;color:#888}
+.metric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:1.5rem}
+.metric-card{background:#fff;border-radius:8px;padding:.875rem 1rem;border:0.5px solid #e0e0e0}
+.metric-label{font-size:12px;color:#888;margin-bottom:4px}
+.metric-value{font-size:22px;font-weight:500;color:#1a1a1a}
+.metric-value.danger{color:#c0392b}
+.metric-value.warning{color:#d68910}
+.metric-value.success{color:#1e8449}
+.section-title{font-size:15px;font-weight:500;margin:1.5rem 0 .75rem;color:#1a1a1a}
+.section-hint{font-size:12px;font-weight:400;color:#888}
+.issue-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px;margin-bottom:1.5rem}
+.issue-card{background:#fff;border:0.5px solid #e0e0e0;border-radius:8px;padding:.75rem 1rem;transition:border-color .15s,background .15s}
+.issue-card.clickable{cursor:pointer}
+.issue-card.clickable:hover{border-color:#aaa;background:#fafafa}
+.issue-card.active{background:#fafafa;border-width:1.5px}
+.issue-card.high{border-left:3px solid #e74c3c}
+.issue-card.medium{border-left:3px solid #f39c12}
+.issue-card.low{border-left:3px solid #27ae60}
+.issue-card.clean{border-left:3px solid #ddd;opacity:.75}
+.issue-card.high.active{border-color:#e74c3c}
+.issue-card.medium.active{border-color:#f39c12}
+.issue-card.low.active{border-color:#27ae60}
+.badge{display:inline-block;font-size:10px;padding:2px 7px;border-radius:6px;margin-bottom:6px;font-weight:500}
+.badge.high{background:#fdecea;color:#c0392b}
+.badge.medium{background:#fef9e7;color:#9a6e00}
+.badge.low{background:#eafaf1;color:#1e8449}
+.badge.clean{background:#f0f0f0;color:#888}
+.issue-name{font-size:13px;font-weight:500;margin-bottom:4px;color:#1a1a1a}
+.issue-count{font-size:20px;font-weight:500;color:#1a1a1a}
+.issue-count.zero{color:#1e8449}
+.issue-pct{font-size:11px;color:#888}
+.issue-hint{font-size:11px;color:#888;margin-top:6px;display:flex;align-items:center;gap:4px}
+.geo-signals{background:#fff;border-radius:12px;border:0.5px solid #e0e0e0;padding:1rem 1.25rem;margin-bottom:1.5rem}
+.geo-item{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:0.5px solid #f0f0f0;font-size:13px;color:#1a1a1a}
+.geo-item:last-child{border-bottom:none}
+.geo-item-label{color:#555}
+.active-filter{background:#ebf5fb;border:0.5px solid #aed6f1;border-radius:8px;padding:7px 12px;font-size:13px;color:#1a6491;display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.active-filter button{background:none;border:none;cursor:pointer;color:#1a6491;font-size:13px;font-weight:500;padding:0}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1rem;align-items:center}
+.filters input,.filters select{font-size:13px;padding:6px 8px;border-radius:8px;border:0.5px solid #ccc;background:#fff;color:#1a1a1a}
+.filters button{font-size:12px;padding:5px 10px;border-radius:8px;border:0.5px solid #ccc;background:#fff;color:#1a1a1a;cursor:pointer}
+.filter-count{font-size:12px;color:#888}
+table{width:100%;border-collapse:collapse;font-size:13px;background:#fff;border-radius:8px;overflow:hidden;border:0.5px solid #e0e0e0}
+th{text-align:left;padding:9px 10px;border-bottom:1px solid #e0e0e0;font-weight:500;font-size:12px;color:#888;white-space:nowrap;background:#fafafa}
+td{padding:8px 10px;border-bottom:0.5px solid #f0f0f0;vertical-align:top;color:#1a1a1a}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#fafafa}
+.url-cell{max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:#555}
+.tag{display:inline-block;font-size:10px;padding:2px 6px;border-radius:4px;margin:1px;font-weight:500}
+.tag.err{background:#fdecea;color:#c0392b}
+.tag.warn{background:#fef9e7;color:#9a6e00}
+.tag.ok{background:#eafaf1;color:#1e8449}
+.s200{color:#1e8449;font-weight:500}
+.s3xx{color:#d68910;font-weight:500}
+.serr{color:#c0392b;font-weight:500}
+.no-data{text-align:center;padding:3rem;color:#aaa;font-size:14px}
+.pagination{display:flex;gap:6px;align-items:center;margin-top:1rem;font-size:13px}
+.pagination button{padding:5px 12px;border-radius:8px;border:0.5px solid #ccc;background:#fff;color:#1a1a1a;cursor:pointer}
+.pagination button:disabled{opacity:.4;cursor:default}
+.pagination .page-info{color:#888}
+.top-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem}
+.top-bar button{font-size:12px;padding:5px 10px;border-radius:8px;border:0.5px solid #ccc;background:#fff;cursor:pointer}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>SEO & GEO Audit Dashboard</h1>
+  <p class="subtitle">Upload a Screaming Frog .xlsx export to analyse your site</p>
+
+  <div id="upload-section">
+    <div class="upload-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+      <div class="upload-icon"><i class="ti ti-upload"></i></div>
+      <p class="upload-title">Upload Screaming Frog export</p>
+      <p class="upload-sub">.xlsx file — drag & drop or click to browse</p>
+    </div>
+    <input type="file" id="file-input" accept=".xlsx" style="display:none">
+  </div>
+
+  <div id="dashboard" style="display:none">
+    <div class="top-bar">
+      <p style="font-size:13px;color:#888" id="crawl-info"></p>
+      <button onclick="resetDashboard()"><i class="ti ti-refresh"></i> New file</button>
+    </div>
+
+    <div class="metric-grid" id="metrics"></div>
+
+    <p class="section-title">SEO checks <span class="section-hint">— click any issue card to filter the URL table · green = no issues found</span></p>
+    <div id="high-issues"></div>
+    <div id="medium-issues"></div>
+    <div id="low-issues"></div>
+
+    <p class="section-title">GEO checks <span class="section-hint">— generative engine optimisation signals</span></p>
+    <div id="geo-checks"></div>
+
+    <p class="section-title">GEO signals (static)</p>
+    <div class="geo-signals" id="geo-signals"></div>
+
+    <p class="section-title">URL table</p>
+    <div class="filters">
+      <input type="text" id="search" placeholder="Search URL..." style="width:210px" oninput="applyFilters()">
+      <select id="filter-status" onchange="applyFilters()">
+        <option value="">All statuses</option>
+        <option value="200">200 OK</option>
+        <option value="3xx">3xx Redirect</option>
+        <option value="4xx">4xx Error</option>
+        <option value="5xx">5xx Error</option>
+      </select>
+      <select id="filter-index" onchange="applyFilters()">
+        <option value="">All indexability</option>
+        <option value="Indexable">Indexable</option>
+        <option value="Non-Indexable">Non-Indexable</option>
+      </select>
+      <button id="clear-btn" onclick="clearIssueFilter()" style="display:none">× Clear filter</button>
+      <span class="filter-count" id="filter-count"></span>
+    </div>
+    <div id="active-filter" style="display:none" class="active-filter">
+      <i class="ti ti-filter"></i>
+      <span id="active-filter-label"></span>
+      <button onclick="clearIssueFilter()">× clear</button>
+    </div>
+    <div style="overflow-x:auto">
+      <table>
+        <thead>
+          <tr>
+            <th>URL</th><th>Status</th><th>Indexable</th><th>Title</th><th>Length</th><th>H1</th><th>Canonical</th><th>Schema</th><th>Word count</th><th>Issues</th>
+          </tr>
+        </thead>
+        <tbody id="url-table"></tbody>
+      </table>
+    </div>
+    <div class="pagination" id="pagination"></div>
+  </div>
+</div>
+
+<script>
+let allRows=[],filteredRows=[],currentPage=1,activeIssueKey=null;
+const PAGE_SIZE=25;
+
+const ISSUE_DEFS=[
+  {key:'multi_title',label:'Multiple page titles',sev:'high',test:r=>r.title2&&r.title2!==r.title},
+  {key:'err5',label:'5xx server errors',sev:'high',test:r=>String(r.status).startsWith('5')},
+  {key:'err4',label:'4xx client errors',sev:'high',test:r=>String(r.status).startsWith('4')},
+  {key:'missing_title',label:'Missing page title',sev:'high',test:r=>!r.title&&String(r.status)==='200'},
+  {key:'long_title',label:'Title over 60 chars',sev:'medium',test:r=>r.titleLen>60&&r.titleLen>0},
+  {key:'dup_title',label:'Duplicate page titles',sev:'medium',test:null},
+  {key:'missing_desc',label:'Missing meta description',sev:'medium',test:r=>!r.desc&&String(r.status)==='200'},
+  {key:'multi_h1',label:'Multiple H1 tags',sev:'medium',test:r=>!!r.h1b},
+  {key:'missing_canonical',label:'Missing canonical',sev:'medium',test:r=>!r.canonical&&r.indexable==='Indexable'},
+  {key:'missing_h1',label:'Missing H1',sev:'medium',test:r=>!r.h1&&String(r.status)==='200'},
+  {key:'dup_h1',label:'Duplicate H1',sev:'low',test:null},
+  {key:'long_desc',label:'Meta desc over 155 chars',sev:'low',test:r=>r.descLen>155},
+  {key:'very_hard',label:'Readability very hard',sev:'low',test:r=>r.readability==='Very Hard'},
+  {key:'hard',label:'Readability hard',sev:'low',test:r=>r.readability==='Hard'},
+  {key:'redirect_3xx',label:'Internal redirects (3xx)',sev:'low',test:r=>String(r.status).startsWith('3')},
+];
+
+const GEO_DEFS=[
+  {key:'no_schema',label:'No structured data / JSON-LD',sev:'high',test:r=>!r.schema&&r.indexable==='Indexable'},
+  {key:'no_canonical_geo',label:'Missing canonical (GEO risk)',sev:'medium',test:r=>!r.canonical&&r.indexable==='Indexable'},
+  {key:'thin_content',label:'Thin content (under 300 words)',sev:'medium',test:r=>r.wordCount>0&&r.wordCount<300&&r.indexable==='Indexable'},
+  {key:'very_hard_geo',label:'Readability very hard (GEO)',sev:'low',test:r=>r.readability==='Very Hard'&&r.indexable==='Indexable'},
+  {key:'no_inlinks',label:'No inlinks (orphaned pages)',sev:'low',test:r=>r.inlinks===0&&r.indexable==='Indexable'},
+];
+
+document.getElementById('file-input').addEventListener('change',e=>{if(e.target.files[0])readFile(e.target.files[0]);});
+const dz=document.getElementById('drop-zone');
+dz.addEventListener('dragover',e=>e.preventDefault());
+dz.addEventListener('drop',e=>{e.preventDefault();if(e.dataTransfer.files[0])readFile(e.dataTransfer.files[0]);});
+
+function readFile(file){
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{const wb=XLSX.read(e.target.result,{type:'array'});processWorkbook(wb);}
+    catch(err){alert('Could not read file. Make sure it is a Screaming Frog .xlsx export.');}
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function processWorkbook(wb){
+  let htmlSheet=null;
+  for(const name of wb.SheetNames){
+    if(name.toLowerCase().includes('html')){htmlSheet=XLSX.utils.sheet_to_json(wb.Sheets[name]);break;}
+  }
+  if(!htmlSheet){
+    for(const name of wb.SheetNames){
+      const d=XLSX.utils.sheet_to_json(wb.Sheets[name]);
+      if(d.length>0&&d[0]['Address']){htmlSheet=d;break;}
+    }
+  }
+  if(!htmlSheet){alert('Could not find HTML data sheet.');return;}
+  allRows=htmlSheet.map(r=>({
+    url:r['Address']||'',
+    status:r['Status Code']||'',
+    indexable:r['Indexability']||'',
+    title:r['Title 1']||'',
+    titleLen:parseFloat(r['Title 1 Length'])||0,
+    title2:r['Title 2']||'',
+    desc:r['Meta Description 1']||'',
+    descLen:parseFloat(r['Meta Description 1 Length'])||0,
+    h1:r['H1-1']||'',
+    h1b:r['H1-2']||'',
+    canonical:r['Canonical Link Element 1']||'',
+    wordCount:parseFloat(r['Word Count'])||0,
+    readability:r['Readability']||'',
+    schema:'',
+    inlinks:parseFloat(r['Inlinks'])||0,
+  }));
+  buildDashboard();
+}
+
+function getMatchingRows(key,defs){
+  const def=defs.find(d=>d.key===key);
+  if(!def)return[];
+  if(key==='dup_title'){const c={};allRows.forEach(r=>{if(r.title)c[r.title]=(c[r.title]||0)+1;});return allRows.filter(r=>r.title&&c[r.title]>1);}
+  if(key==='dup_h1'){const c={};allRows.forEach(r=>{if(r.h1)c[r.h1]=(c[r.h1]||0)+1;});return allRows.filter(r=>r.h1&&c[r.h1]>1);}
+  if(def.test)return allRows.filter(def.test);
+  return[];
+}
+
+function pct(n,t){return t>0?((n/t)*100).toFixed(1):'0';}
+
+function buildDashboard(){
+  document.getElementById('upload-section').style.display='none';
+  document.getElementById('dashboard').style.display='block';
+  const total=allRows.length;
+  const indexable=allRows.filter(r=>r.indexable==='Indexable').length;
+  const errors=allRows.filter(r=>String(r.status).startsWith('4')||String(r.status).startsWith('5')).length;
+  const redirects=allRows.filter(r=>String(r.status).startsWith('3')).length;
+  const noSchema=allRows.filter(r=>!r.schema&&r.indexable==='Indexable').length;
+  const noCanon=allRows.filter(r=>!r.canonical&&r.indexable==='Indexable').length;
+  const multiH1=allRows.filter(r=>r.h1b).length;
+  document.getElementById('crawl-info').textContent=`${total} URLs · ${indexable} indexable · ${errors} errors`;
+  document.getElementById('metrics').innerHTML=`
+    <div class="metric-card"><div class="metric-label">Total URLs</div><div class="metric-value">${total}</div></div>
+    <div class="metric-card"><div class="metric-label">Indexable</div><div class="metric-value success">${indexable}</div></div>
+    <div class="metric-card"><div class="metric-label">Errors (4xx/5xx)</div><div class="metric-value ${errors>0?'danger':''}">${errors}</div></div>
+    <div class="metric-card"><div class="metric-label">Redirects</div><div class="metric-value ${redirects>0?'warning':''}">${redirects}</div></div>
+    <div class="metric-card"><div class="metric-label">No schema</div><div class="metric-value ${noSchema>0?'danger':''}">${noSchema}</div></div>
+    <div class="metric-card"><div class="metric-label">No canonical</div><div class="metric-value ${noCanon>0?'warning':''}">${noCanon}</div></div>
+    <div class="metric-card"><div class="metric-label">Multiple H1</div><div class="metric-value ${multiH1>0?'warning':''}">${multiH1}</div></div>
+  `;
+  renderIssueCards('high-issues','high',ISSUE_DEFS);
+  renderIssueCards('medium-issues','medium',ISSUE_DEFS);
+  renderIssueCards('low-issues','low',ISSUE_DEFS);
+  renderIssueCards('geo-checks-high','high',GEO_DEFS);
+  renderIssueCards('geo-checks-medium','medium',GEO_DEFS);
+  renderIssueCards('geo-checks-low','low',GEO_DEFS);
+  buildGeoSignals();
+  filteredRows=[...allRows];
+  currentPage=1;
+  document.getElementById('filter-count').textContent=`${filteredRows.length} URLs`;
+  renderTable();
+}
+
+function renderIssueCards(containerId,sev,defs){
+  const el=document.getElementById(containerId);
+  if(!el)return;
+  const items=defs.filter(d=>d.sev===sev).map(d=>({...d,count:getMatchingRows(d.key,defs).length}));
+  if(items.length===0){el.innerHTML='';return;}
+  const label=sev.charAt(0).toUpperCase()+sev.slice(1)+' priority';
+  el.innerHTML=`<p style="font-size:12px;color:#888;margin-bottom:6px">${label}</p><div class="issue-grid">${
+    items.map(iss=>{
+      const isClean=iss.count===0;
+      const isActive=activeIssueKey===iss.key;
+      return`<div class="issue-card ${isClean?'clean':sev} ${iss.count>0?'clickable':''} ${isActive?'active':''}" ${iss.count>0?`onclick="filterByIssue('${iss.key}','${iss.label}',${defs===GEO_DEFS?'GEO_DEFS':'ISSUE_DEFS'})"`:''}>
+        <div class="badge ${isClean?'clean':sev}">${isClean?'✓ clear':sev}</div>
+        <div class="issue-name">${iss.label}</div>
+        <div class="issue-count ${isClean?'zero':''}">${iss.count}</div>
+        <div class="issue-pct">${isClean?'no issues found':pct(iss.count,allRows.length)+'% of pages'}</div>
+        ${iss.count>0?`<div class="issue-hint"><i class="ti ti-filter" style="font-size:11px"></i> Click to see URLs</div>`:''}
+      </div>`;
+    }).join('')
+  }</div>`;
+}
+
+function buildGeoSignals(){
+  const indexable=allRows.filter(r=>r.indexable==='Indexable');
+  const withSchema=indexable.filter(r=>r.schema).length;
+  const noCanon=allRows.filter(r=>!r.canonical&&r.indexable==='Indexable').length;
+  const schemaPct=indexable.length>0?Math.round((withSchema/indexable.length)*100):0;
+  document.getElementById('geo-signals').innerHTML=`
+    <div class="geo-item"><span class="geo-item-label">Structured data coverage</span><span style="font-weight:500;color:${withSchema===0?'#c0392b':'#1e8449'}">${schemaPct}% (${withSchema}/${indexable.length} pages)</span></div>
+    <div class="geo-item"><span class="geo-item-label">GPTBot access</span><span style="color:#1e8449;font-weight:500">Not blocked</span></div>
+    <div class="geo-item"><span class="geo-item-label">Claude-User access</span><span style="color:#1e8449;font-weight:500">Not blocked</span></div>
+    <div class="geo-item"><span class="geo-item-label">PerplexityBot access</span><span style="color:#1e8449;font-weight:500">Not blocked</span></div>
+    <div class="geo-item"><span class="geo-item-label">llms.txt declared</span><span style="color:#1e8449;font-weight:500">Yes</span></div>
+    <div class="geo-item"><span class="geo-item-label">Indexable pages missing canonical</span><span style="font-weight:500;color:${noCanon>0?'#d68910':'#1e8449'}">${noCanon}</span></div>
+  `;
+}
+
+document.getElementById('geo-checks').innerHTML=`
+  <div id="geo-checks-high"></div>
+  <div id="geo-checks-medium"></div>
+  <div id="geo-checks-low"></div>
+`;
+
+function filterByIssue(key,label,defs){
+  if(activeIssueKey===key){clearIssueFilter();return;}
+  activeIssueKey=key;
+  filteredRows=getMatchingRows(key,defs);
+  currentPage=1;
+  document.getElementById('active-filter').style.display='flex';
+  document.getElementById('active-filter-label').textContent=`Showing: ${label} (${filteredRows.length} URLs)`;
+  document.getElementById('clear-btn').style.display='inline-block';
+  document.getElementById('filter-count').textContent=`${filteredRows.length} URLs`;
+  refreshCards();
+  renderTable();
+  document.getElementById('url-table').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function clearIssueFilter(){
+  activeIssueKey=null;
+  document.getElementById('active-filter').style.display='none';
+  document.getElementById('clear-btn').style.display='none';
+  document.getElementById('search').value='';
+  document.getElementById('filter-status').value='';
+  document.getElementById('filter-index').value='';
+  filteredRows=[...allRows];
+  currentPage=1;
+  document.getElementById('filter-count').textContent=`${filteredRows.length} URLs`;
+  refreshCards();
+  renderTable();
+}
+
+function refreshCards(){
+  renderIssueCards('high-issues','high',ISSUE_DEFS);
+  renderIssueCards('medium-issues','medium',ISSUE_DEFS);
+  renderIssueCards('low-issues','low',ISSUE_DEFS);
+  renderIssueCards('geo-checks-high','high',GEO_DEFS);
+  renderIssueCards('geo-checks-medium','medium',GEO_DEFS);
+  renderIssueCards('geo-checks-low','low',GEO_DEFS);
+}
+
+function applyFilters(){
+  activeIssueKey=null;
+  document.getElementById('active-filter').style.display='none';
+  document.getElementById('clear-btn').style.display='none';
+  refreshCards();
+  const search=document.getElementById('search').value.toLowerCase();
+  const status=document.getElementById('filter-status').value;
+  const index=document.getElementById('filter-index').value;
+  filteredRows=allRows.filter(r=>{
+    if(search&&!r.url.toLowerCase().includes(search))return false;
+    const s=String(r.status);
+    if(status==='200'&&s!=='200')return false;
+    if(status==='3xx'&&!s.startsWith('3'))return false;
+    if(status==='4xx'&&!s.startsWith('4'))return false;
+    if(status==='5xx'&&!s.startsWith('5'))return false;
+    if(index&&r.indexable!==index)return false;
+    return true;
+  });
+  currentPage=1;
+  document.getElementById('filter-count').textContent=`${filteredRows.length} URLs`;
+  renderTable();
+}
+
+function getRowIssues(row){
+  const tc={},hc={};
+  allRows.forEach(r=>{if(r.title)tc[r.title]=(tc[r.title]||0)+1;if(r.h1)hc[r.h1]=(hc[r.h1]||0)+1;});
+  return [...ISSUE_DEFS,...GEO_DEFS].filter(d=>{
+    if(d.key==='dup_title')return row.title&&tc[row.title]>1;
+    if(d.key==='dup_h1')return row.h1&&hc[row.h1]>1;
+    if(d.test)return d.test(row);
+    return false;
+  }).map(d=>({label:d.label,sev:d.sev}));
+}
+
+function renderTable(){
+  const start=(currentPage-1)*PAGE_SIZE;
+  const page=filteredRows.slice(start,start+PAGE_SIZE);
+  const tbody=document.getElementById('url-table');
+  if(page.length===0){tbody.innerHTML=`<tr><td colspan="10" class="no-data">No URLs match the current filters.</td></tr>`;document.getElementById('pagination').innerHTML='';return;}
+  tbody.innerHTML=page.map(r=>{
+    const issues=getRowIssues(r);
+    const sc=String(r.status);
+    const statusClass=sc==='200'?'s200':sc.startsWith('3')?'s3xx':'serr';
+    const slug=r.url.replace(/^https?:\/\/[^/]+/,'')||'/';
+    return`<tr>
+      <td class="url-cell" title="${r.url}">${slug}</td>
+      <td><span class="${statusClass}">${r.status}</span></td>
+      <td style="font-size:12px;color:${r.indexable==='Indexable'?'#1e8449':'#c0392b'}">${r.indexable==='Indexable'?'Yes':'No'}</td>
+      <td style="font-size:12px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.title}">${r.title||'<span style="color:#c0392b">missing</span>'}</td>
+      <td style="font-size:12px;color:${r.titleLen>60?'#c0392b':'inherit'}">${r.titleLen||'—'}</td>
+      <td style="font-size:12px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.h1||(sc==='200'?'<span style="color:#c0392b">missing</span>':'—')}</td>
+      <td style="font-size:12px;color:${r.canonical?'#1e8449':'#d68910'}">${r.canonical?'Yes':'No'}</td>
+      <td style="font-size:12px;color:${r.schema?'#1e8449':'#c0392b'}">${r.schema||'None'}</td>
+      <td style="font-size:12px">${r.wordCount||'—'}</td>
+      <td>${issues.map(i=>`<span class="tag ${i.sev==='high'?'err':i.sev==='medium'?'warn':'ok'}">${i.label}</span>`).join('')||'<span style="font-size:11px;color:#aaa">—</span>'}</td>
+    </tr>`;
+  }).join('');
+  const totalPages=Math.ceil(filteredRows.length/PAGE_SIZE);
+  document.getElementById('pagination').innerHTML=totalPages>1?`
+    <button onclick="changePage(-1)" ${currentPage===1?'disabled':''}>← Prev</button>
+    <span class="page-info">Page ${currentPage} of ${totalPages}</span>
+    <button onclick="changePage(1)" ${currentPage===totalPages?'disabled':''}>Next →</button>
+  `:'';
+}
+
+function changePage(dir){
+  currentPage=Math.max(1,Math.min(Math.ceil(filteredRows.length/PAGE_SIZE),currentPage+dir));
+  renderTable();
+}
+
+function resetDashboard(){
+  document.getElementById('upload-section').style.display='block';
+  document.getElementById('dashboard').style.display='none';
+  document.getElementById('file-input').value='';
+  allRows=[];filteredRows=[];activeIssueKey=null;
+}
+</script>
+</body>
+</html>
+ENDOFFILE
+Ausgabe
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SEO & GEO Audit Dashboard</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f5;color:#1a1a1a;min-height:100vh}
+.container{max-width:1100px;margin:0 auto;padding:2rem 1.5rem}
+h1{font-size:20px;font-weight:500;margin-bottom:4px}
+.subtitle{font-size:13px;color:#666;margin-bottom:2rem}
+.upload-zone{border:1.5px dashed #ccc;border-radius:12px;padding:2.5rem;text-align:center;cursor:pointer;background:#fff;transition:border-color .2s;margin-bottom:2rem}
+.upload-zone:hover{border-color:#888}
+.upload-icon{font-size:32px;color:#aaa;margin-bottom:8px}
+.upload-title{font-weight:500;margin-bottom:4px}
+.upload-sub{font-size:13px;color:#888}
+.metric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:1.5rem}
+.metric-card{background:#fff;border-radius:8px;padding:.875rem 1rem;border:0.5px solid #e0e0e0}
+.metric-label{font-size:12px;color:#888;margin-bottom:4px}
+.metric-value{font-size:22px;font-weight:500;color:#1a1a1a}
+.metric-value.danger{color:#c0392b}
+.metric-value.warning{color:#d68910}
+.metric-value.success{color:#1e8449}
+.section-title{font-size:15px;font-weight:500;margin:1.5rem 0 .75rem;color:#1a1a1a}
+.section-hint{font-size:12px;font-weight:400;color:#888}
+.issue-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px;margin-bottom:1.5rem}
+.issue-card{background:#fff;border:0.5px solid #e0e0e0;border-radius:8px;padding:.75rem 1rem;transition:border-color .15s,background .15s}
+.issue-card.clickable{cursor:pointer}
+.issue-card.clickable:hover{border-color:#aaa;background:#fafafa}
+.issue-card.active{background:#fafafa;border-width:1.5px}
+.issue-card.high{border-left:3px solid #e74c3c}
+.issue-card.medium{border-left:3px solid #f39c12}
+.issue-card.low{border-left:3px solid #27ae60}
+.issue-card.clean{border-left:3px solid #ddd;opacity:.75}
+.issue-card.high.active{border-color:#e74c3c}
+.issue-card.medium.active{border-color:#f39c12}
+.issue-card.low.active{border-color:#27ae60}
+.badge{display:inline-block;font-size:10px;padding:2px 7px;border-radius:6px;margin-bottom:6px;font-weight:500}
+.badge.high{background:#fdecea;color:#c0392b}
+.badge.medium{background:#fef9e7;color:#9a6e00}
+.badge.low{background:#eafaf1;color:#1e8449}
+.badge.clean{background:#f0f0f0;color:#888}
+.issue-name{font-size:13px;font-weight:500;margin-bottom:4px;color:#1a1a1a}
+.issue-count{font-size:20px;font-weight:500;color:#1a1a1a}
+.issue-count.zero{color:#1e8449}
+.issue-pct{font-size:11px;color:#888}
+.issue-hint{font-size:11px;color:#888;margin-top:6px;display:flex;align-items:center;gap:4px}
+.geo-signals{background:#fff;border-radius:12px;border:0.5px solid #e0e0e0;padding:1rem 1.25rem;margin-bottom:1.5rem}
+.geo-item{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:0.5px solid #f0f0f0;font-size:13px;color:#1a1a1a}
+.geo-item:last-child{border-bottom:none}
+.geo-item-label{color:#555}
+.active-filter{background:#ebf5fb;border:0.5px solid #aed6f1;border-radius:8px;padding:7px 12px;font-size:13px;color:#1a6491;display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.active-filter button{background:none;border:none;cursor:pointer;color:#1a6491;font-size:13px;font-weight:500;padding:0}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1rem;align-items:center}
+.filters input,.filters select{font-size:13px;padding:6px 8px;border-radius:8px;border:0.5px solid #ccc;background:#fff;color:#1a1a1a}
+.filters button{font-size:12px;padding:5px 10px;border-radius:8px;border:0.5px solid #ccc;background:#fff;color:#1a1a1a;cursor:pointer}
+.filter-count{font-size:12px;color:#888}
+table{width:100%;border-collapse:collapse;font-size:13px;background:#fff;border-radius:8px;overflow:hidden;border:0.5px solid #e0e0e0}
+th{text-align:left;padding:9px 10px;border-bottom:1px solid #e0e0e0;font-weight:500;font-size:12px;color:#888;white-space:nowrap;background:#fafafa}
+td{padding:8px 10px;border-bottom:0.5px solid #f0f0f0;vertical-align:top;color:#1a1a1a}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#fafafa}
+.url-cell{max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:#555}
+.tag{display:inline-block;font-size:10px;padding:2px 6px;border-radius:4px;margin:1px;font-weight:500}
+.tag.err{background:#fdecea;color:#c0392b}
+.tag.warn{background:#fef9e7;color:#9a6e00}
+.tag.ok{background:#eafaf1;color:#1e8449}
+.s200{color:#1e8449;font-weight:500}
+.s3xx{color:#d68910;font-weight:500}
+.serr{color:#c0392b;font-weight:500}
+.no-data{text-align:center;padding:3rem;color:#aaa;font-size:14px}
+.pagination{display:flex;gap:6px;align-items:center;margin-top:1rem;font-size:13px}
+.pagination button{padding:5px 12px;border-radius:8px;border:0.5px solid #ccc;background:#fff;color:#1a1a1a;cursor:pointer}
+.pagination button:disabled{opacity:.4;cursor:default}
+.pagination .page-info{color:#888}
+.top-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem}
+.top-bar button{font-size:12px;padding:5px 10px;border-radius:8px;border:0.5px solid #ccc;background:#fff;cursor:pointer}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>SEO & GEO Audit Dashboard</h1>
+  <p class="subtitle">Upload a Screaming Frog .xlsx export to analyse your site</p>
+
+  <div id="upload-section">
+    <div class="upload-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+      <div class="upload-icon"><i class="ti ti-upload"></i></div>
+      <p class="upload-title">Upload Screaming Frog export</p>
+      <p class="upload-sub">.xlsx file — drag & drop or click to browse</p>
+    </div>
+    <input type="file" id="file-input" accept=".xlsx" style="display:none">
+  </div>
+
+  <div id="dashboard" style="display:none">
+    <div class="top-bar">
+      <p style="font-size:13px;color:#888" id="crawl-info"></p>
+      <button onclick="resetDashboard()"><i class="ti ti-refresh"></i> New file</button>
+    </div>
+
+    <div class="metric-grid" id="metrics"></div>
+
+    <p class="section-title">SEO checks <span class="section-hint">— click any issue card to filter the URL table · green = no issues found</span></p>
+    <div id="high-issues"></div>
+    <div id="medium-issues"></div>
+    <div id="low-issues"></div>
+
+    <p class="section-title">GEO checks <span class="section-hint">— generative engine optimisation signals</span></p>
+    <div id="geo-checks"></div>
+
+    <p class="section-title">GEO signals (static)</p>
+    <div class="geo-signals" id="geo-signals"></div>
+
+    <p class="section-title">URL table</p>
+    <div class="filters">
+      <input type="text" id="search" placeholder="Search URL..." style="width:210px" oninput="applyFilters()">
+      <select id="filter-status" onchange="applyFilters()">
+        <option value="">All statuses</option>
+        <option value="200">200 OK</option>
+        <option value="3xx">3xx Redirect</option>
+        <option value="4xx">4xx Error</option>
+        <option value="5xx">5xx Error</option>
+      </select>
+      <select id="filter-index" onchange="applyFilters()">
+        <option value="">All indexability</option>
+        <option value="Indexable">Indexable</option>
+        <option value="Non-Indexable">Non-Indexable</option>
+      </select>
+      <button id="clear-btn" onclick="clearIssueFilter()" style="display:none">× Clear filter</button>
+      <span class="filter-count" id="filter-count"></span>
+    </div>
+    <div id="active-filter" style="display:none" class="active-filter">
+      <i class="ti ti-filter"></i>
+      <span id="active-filter-label"></span>
+      <button onclick="clearIssueFilter()">× clear</button>
+    </div>
+    <div style="overflow-x:auto">
+      <table>
+        <thead>
+          <tr>
+            <th>URL</th><th>Status</th><th>Indexable</th><th>Title</th><th>Length</th><th>H1</th><th>Canonical</th><th>Schema</th><th>Word count</th><th>Issues</th>
+          </tr>
+        </thead>
+        <tbody id="url-table"></tbody>
+      </table>
+    </div>
+    <div class="pagination" id="pagination"></div>
+  </div>
+</div>
+
+<script>
+let allRows=[],filteredRows=[],currentPage=1,activeIssueKey=null;
+const PAGE_SIZE=25;
+
+const ISSUE_DEFS=[
+  {key:'multi_title',label:'Multiple page titles',sev:'high',test:r=>r.title2&&r.title2!==r.title},
+  {key:'err5',label:'5xx server errors',sev:'high',test:r=>String(r.status).startsWith('5')},
+  {key:'err4',label:'4xx client errors',sev:'high',test:r=>String(r.status).startsWith('4')},
+  {key:'missing_title',label:'Missing page title',sev:'high',test:r=>!r.title&&String(r.status)==='200'},
+  {key:'long_title',label:'Title over 60 chars',sev:'medium',test:r=>r.titleLen>60&&r.titleLen>0},
+  {key:'dup_title',label:'Duplicate page titles',sev:'medium',test:null},
+  {key:'missing_desc',label:'Missing meta description',sev:'medium',test:r=>!r.desc&&String(r.status)==='200'},
+  {key:'multi_h1',label:'Multiple H1 tags',sev:'medium',test:r=>!!r.h1b},
+  {key:'missing_canonical',label:'Missing canonical',sev:'medium',test:r=>!r.canonical&&r.indexable==='Indexable'},
+  {key:'missing_h1',label:'Missing H1',sev:'medium',test:r=>!r.h1&&String(r.status)==='200'},
+  {key:'dup_h1',label:'Duplicate H1',sev:'low',test:null},
+  {key:'long_desc',label:'Meta desc over 155 chars',sev:'low',test:r=>r.descLen>155},
+  {key:'very_hard',label:'Readability very hard',sev:'low',test:r=>r.readability==='Very Hard'},
+  {key:'hard',label:'Readability hard',sev:'low',test:r=>r.readability==='Hard'},
+  {key:'redirect_3xx',label:'Internal redirects (3xx)',sev:'low',test:r=>String(r.status).startsWith('3')},
+];
+
+const GEO_DEFS=[
+  {key:'no_schema',label:'No structured data / JSON-LD',sev:'high',test:r=>!r.schema&&r.indexable==='Indexable'},
+  {key:'no_canonical_geo',label:'Missing canonical (GEO risk)',sev:'medium',test:r=>!r.canonical&&r.indexable==='Indexable'},
+  {key:'thin_content',label:'Thin content (under 300 words)',sev:'medium',test:r=>r.wordCount>0&&r.wordCount<300&&r.indexable==='Indexable'},
+  {key:'very_hard_geo',label:'Readability very hard (GEO)',sev:'low',test:r=>r.readability==='Very Hard'&&r.indexable==='Indexable'},
+  {key:'no_inlinks',label:'No inlinks (orphaned pages)',sev:'low',test:r=>r.inlinks===0&&r.indexable==='Indexable'},
+];
+
+document.getElementById('file-input').addEventListener('change',e=>{if(e.target.files[0])readFile(e.target.files[0]);});
+const dz=document.getElementById('drop-zone');
+dz.addEventListener('dragover',e=>e.preventDefault());
+dz.addEventListener('drop',e=>{e.preventDefault();if(e.dataTransfer.files[0])readFile(e.dataTransfer.files[0]);});
+
+function readFile(file){
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{const wb=XLSX.read(e.target.result,{type:'array'});processWorkbook(wb);}
+    catch(err){alert('Could not read file. Make sure it is a Screaming Frog .xlsx export.');}
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function processWorkbook(wb){
+  let htmlSheet=null;
+  for(const name of wb.SheetNames){
+    if(name.toLowerCase().includes('html')){htmlSheet=XLSX.utils.sheet_to_json(wb.Sheets[name]);break;}
+  }
+  if(!htmlSheet){
+    for(const name of wb.SheetNames){
+      const d=XLSX.utils.sheet_to_json(wb.Sheets[name]);
+      if(d.length>0&&d[0]['Address']){htmlSheet=d;break;}
+    }
+  }
+  if(!htmlSheet){alert('Could not find HTML data sheet.');return;}
+  allRows=htmlSheet.map(r=>({
+    url:r['Address']||'',
+    status:r['Status Code']||'',
+    indexable:r['Indexability']||'',
+    title:r['Title 1']||'',
+    titleLen:parseFloat(r['Title 1 Length'])||0,
+    title2:r['Title 2']||'',
+    desc:r['Meta Description 1']||'',
+    descLen:parseFloat(r['Meta Description 1 Length'])||0,
+    h1:r['H1-1']||'',
+    h1b:r['H1-2']||'',
+    canonical:r['Canonical Link Element 1']||'',
+    wordCount:parseFloat(r['Word Count'])||0,
+    readability:r['Readability']||'',
+    schema:'',
+    inlinks:parseFloat(r['Inlinks'])||0,
+  }));
+  buildDashboard();
+}
+
+function getMatchingRows(key,defs){
+  const def=defs.find(d=>d.key===key);
+  if(!def)return[];
+  if(key==='dup_title'){const c={};allRows.forEach(r=>{if(r.title)c[r.title]=(c[r.title]||0)+1;});return allRows.filter(r=>r.title&&c[r.title]>1);}
+  if(key==='dup_h1'){const c={};allRows.forEach(r=>{if(r.h1)c[r.h1]=(c[r.h1]||0)+1;});return allRows.filter(r=>r.h1&&c[r.h1]>1);}
+  if(def.test)return allRows.filter(def.test);
+  return[];
+}
+
+function pct(n,t){return t>0?((n/t)*100).toFixed(1):'0';}
+
+function buildDashboard(){
+  document.getElementById('upload-section').style.display='none';
+  document.getElementById('dashboard').style.display='block';
+  const total=allRows.length;
+  const indexable=allRows.filter(r=>r.indexable==='Indexable').length;
+  const errors=allRows.filter(r=>String(r.status).startsWith('4')||String(r.status).startsWith('5')).length;
+  const redirects=allRows.filter(r=>String(r.status).startsWith('3')).length;
+  const noSchema=allRows.filter(r=>!r.schema&&r.indexable==='Indexable').length;
+  const noCanon=allRows.filter(r=>!r.canonical&&r.indexable==='Indexable').length;
+  const multiH1=allRows.filter(r=>r.h1b).length;
+  document.getElementById('crawl-info').textContent=`${total} URLs · ${indexable} indexable · ${errors} errors`;
+  document.getElementById('metrics').innerHTML=`
+    <div class="metric-card"><div class="metric-label">Total URLs</div><div class="metric-value">${total}</div></div>
+    <div class="metric-card"><div class="metric-label">Indexable</div><div class="metric-value success">${indexable}</div></div>
+    <div class="metric-card"><div class="metric-label">Errors (4xx/5xx)</div><div class="metric-value ${errors>0?'danger':''}">${errors}</div></div>
+    <div class="metric-card"><div class="metric-label">Redirects</div><div class="metric-value ${redirects>0?'warning':''}">${redirects}</div></div>
+    <div class="metric-card"><div class="metric-label">No schema</div><div class="metric-value ${noSchema>0?'danger':''}">${noSchema}</div></div>
+    <div class="metric-card"><div class="metric-label">No canonical</div><div class="metric-value ${noCanon>0?'warning':''}">${noCanon}</div></div>
+    <div class="metric-card"><div class="metric-label">Multiple H1</div><div class="metric-value ${multiH1>0?'warning':''}">${multiH1}</div></div>
+  `;
+  renderIssueCards('high-issues','high',ISSUE_DEFS);
+  renderIssueCards('medium-issues','medium',ISSUE_DEFS);
+  renderIssueCards('low-issues','low',ISSUE_DEFS);
+  renderIssueCards('geo-checks-high','high',GEO_DEFS);
+  renderIssueCards('geo-checks-medium','medium',GEO_DEFS);
+  renderIssueCards('geo-checks-low','low',GEO_DEFS);
+  buildGeoSignals();
+  filteredRows=[...allRows];
+  currentPage=1;
+  document.getElementById('filter-count').textContent=`${filteredRows.length} URLs`;
+  renderTable();
+}
+
+function renderIssueCards(containerId,sev,defs){
+  const el=document.getElementById(containerId);
+  if(!el)return;
+  const items=defs.filter(d=>d.sev===sev).map(d=>({...d,count:getMatchingRows(d.key,defs).length}));
+  if(items.length===0){el.innerHTML='';return;}
+  const label=sev.charAt(0).toUpperCase()+sev.slice(1)+' priority';
+  el.innerHTML=`<p style="font-size:12px;color:#888;margin-bottom:6px">${label}</p><div class="issue-grid">${
+    items.map(iss=>{
+      const isClean=iss.count===0;
+      const isActive=activeIssueKey===iss.key;
+      return`<div class="issue-card ${isClean?'clean':sev} ${iss.count>0?'clickable':''} ${isActive?'active':''}" ${iss.count>0?`onclick="filterByIssue('${iss.key}','${iss.label}',${defs===GEO_DEFS?'GEO_DEFS':'ISSUE_DEFS'})"`:''}>
+        <div class="badge ${isClean?'clean':sev}">${isClean?'✓ clear':sev}</div>
+        <div class="issue-name">${iss.label}</div>
+        <div class="issue-count ${isClean?'zero':''}">${iss.count}</div>
+        <div class="issue-pct">${isClean?'no issues found':pct(iss.count,allRows.length)+'% of pages'}</div>
+        ${iss.count>0?`<div class="issue-hint"><i class="ti ti-filter" style="font-size:11px"></i> Click to see URLs</div>`:''}
+      </div>`;
+    }).join('')
+  }</div>`;
+}
+
+function buildGeoSignals(){
+  const indexable=allRows.filter(r=>r.indexable==='Indexable');
+  const withSchema=indexable.filter(r=>r.schema).length;
+  const noCanon=allRows.filter(r=>!r.canonical&&r.indexable==='Indexable').length;
+  const schemaPct=indexable.length>0?Math.round((withSchema/indexable.length)*100):0;
+  document.getElementById('geo-signals').innerHTML=`
+    <div class="geo-item"><span class="geo-item-label">Structured data coverage</span><span style="font-weight:500;color:${withSchema===0?'#c0392b':'#1e8449'}">${schemaPct}% (${withSchema}/${indexable.length} pages)</span></div>
+    <div class="geo-item"><span class="geo-item-label">GPTBot access</span><span style="color:#1e8449;font-weight:500">Not blocked</span></div>
+    <div class="geo-item"><span class="geo-item-label">Claude-User access</span><span style="color:#1e8449;font-weight:500">Not blocked</span></div>
+    <div class="geo-item"><span class="geo-item-label">PerplexityBot access</span><span style="color:#1e8449;font-weight:500">Not blocked</span></div>
+    <div class="geo-item"><span class="geo-item-label">llms.txt declared</span><span style="color:#1e8449;font-weight:500">Yes</span></div>
+    <div class="geo-item"><span class="geo-item-label">Indexable pages missing canonical</span><span style="font-weight:500;color:${noCanon>0?'#d68910':'#1e8449'}">${noCanon}</span></div>
+  `;
+}
+
+document.getElementById('geo-checks').innerHTML=`
+  <div id="geo-checks-high"></div>
+  <div id="geo-checks-medium"></div>
+  <div id="geo-checks-low"></div>
+`;
+
+function filterByIssue(key,label,defs){
+  if(activeIssueKey===key){clearIssueFilter();return;}
+  activeIssueKey=key;
+  filteredRows=getMatchingRows(key,defs);
+  currentPage=1;
+  document.getElementById('active-filter').style.display='flex';
+  document.getElementById('active-filter-label').textContent=`Showing: ${label} (${filteredRows.length} URLs)`;
+  document.getElementById('clear-btn').style.display='inline-block';
+  document.getElementById('filter-count').textContent=`${filteredRows.length} URLs`;
+  refreshCards();
+  renderTable();
+  document.getElementById('url-table').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function clearIssueFilter(){
+  activeIssueKey=null;
+  document.getElementById('active-filter').style.display='none';
+  document.getElementById('clear-btn').style.display='none';
+  document.getElementById('search').value='';
+  document.getElementById('filter-status').value='';
+  document.getElementById('filter-index').value='';
+  filteredRows=[...allRows];
+  currentPage=1;
+  document.getElementById('filter-count').textContent=`${filteredRows.length} URLs`;
+  refreshCards();
+  renderTable();
+}
+
+function refreshCards(){
+  renderIssueCards('high-issues','high',ISSUE_DEFS);
+  renderIssueCards('medium-issues','medium',ISSUE_DEFS);
+  renderIssueCards('low-issues','low',ISSUE_DEFS);
+  renderIssueCards('geo-checks-high','high',GEO_DEFS);
+  renderIssueCards('geo-checks-medium','medium',GEO_DEFS);
+  renderIssueCards('geo-checks-low','low',GEO_DEFS);
+}
+
+function applyFilters(){
+  activeIssueKey=null;
+  document.getElementById('active-filter').style.display='none';
+  document.getElementById('clear-btn').style.display='none';
+  refreshCards();
+  const search=document.getElementById('search').value.toLowerCase();
+  const status=document.getElementById('filter-status').value;
+  const index=document.getElementById('filter-index').value;
+  filteredRows=allRows.filter(r=>{
+    if(search&&!r.url.toLowerCase().includes(search))return false;
+    const s=String(r.status);
+    if(status==='200'&&s!=='200')return false;
+    if(status==='3xx'&&!s.startsWith('3'))return false;
+    if(status==='4xx'&&!s.startsWith('4'))return false;
+    if(status==='5xx'&&!s.startsWith('5'))return false;
+    if(index&&r.indexable!==index)return false;
+    return true;
+  });
+  currentPage=1;
+  document.getElementById('filter-count').textContent=`${filteredRows.length} URLs`;
+  renderTable();
+}
+
+function getRowIssues(row){
+  const tc={},hc={};
+  allRows.forEach(r=>{if(r.title)tc[r.title]=(tc[r.title]||0)+1;if(r.h1)hc[r.h1]=(hc[r.h1]||0)+1;});
+  return [...ISSUE_DEFS,...GEO_DEFS].filter(d=>{
+    if(d.key==='dup_title')return row.title&&tc[row.title]>1;
+    if(d.key==='dup_h1')return row.h1&&hc[row.h1]>1;
+    if(d.test)return d.test(row);
+    return false;
+  }).map(d=>({label:d.label,sev:d.sev}));
+}
+
+function renderTable(){
+  const start=(currentPage-1)*PAGE_SIZE;
+  const page=filteredRows.slice(start,start+PAGE_SIZE);
+  const tbody=document.getElementById('url-table');
+  if(page.length===0){tbody.innerHTML=`<tr><td colspan="10" class="no-data">No URLs match the current filters.</td></tr>`;document.getElementById('pagination').innerHTML='';return;}
+  tbody.innerHTML=page.map(r=>{
+    const issues=getRowIssues(r);
+    const sc=String(r.status);
+    const statusClass=sc==='200'?'s200':sc.startsWith('3')?'s3xx':'serr';
+    const slug=r.url.replace(/^https?:\/\/[^/]+/,'')||'/';
+    return`<tr>
+      <td class="url-cell" title="${r.url}">${slug}</td>
+      <td><span class="${statusClass}">${r.status}</span></td>
+      <td style="font-size:12px;color:${r.indexable==='Indexable'?'#1e8449':'#c0392b'}">${r.indexable==='Indexable'?'Yes':'No'}</td>
+      <td style="font-size:12px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.title}">${r.title||'<span style="color:#c0392b">missing</span>'}</td>
+      <td style="font-size:12px;color:${r.titleLen>60?'#c0392b':'inherit'}">${r.titleLen||'—'}</td>
+      <td style="font-size:12px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.h1||(sc==='200'?'<span style="color:#c0392b">missing</span>':'—')}</td>
+      <td style="font-size:12px;color:${r.canonical?'#1e8449':'#d68910'}">${r.canonical?'Yes':'No'}</td>
+      <td style="font-size:12px;color:${r.schema?'#1e8449':'#c0392b'}">${r.schema||'None'}</td>
+      <td style="font-size:12px">${r.wordCount||'—'}</td>
+      <td>${issues.map(i=>`<span class="tag ${i.sev==='high'?'err':i.sev==='medium'?'warn':'ok'}">${i.label}</span>`).join('')||'<span style="font-size:11px;color:#aaa">—</span>'}</td>
+    </tr>`;
+  }).join('');
+  const totalPages=Math.ceil(filteredRows.length/PAGE_SIZE);
+  document.getElementById('pagination').innerHTML=totalPages>1?`
+    <button onclick="changePage(-1)" ${currentPage===1?'disabled':''}>← Prev</button>
+    <span class="page-info">Page ${currentPage} of ${totalPages}</span>
+    <button onclick="changePage(1)" ${currentPage===totalPages?'disabled':''}>Next →</button>
+  `:'';
+}
+
+function changePage(dir){
+  currentPage=Math.max(1,Math.min(Math.ceil(filteredRows.length/PAGE_SIZE),currentPage+dir));
+  renderTable();
+}
+
+function resetDashboard(){
+  document.getElementById('upload-section').style.display='block';
+  document.getElementById('dashboard').style.display='none';
+  document.getElementById('file-input').value='';
+  allRows=[];filteredRows=[];activeIssueKey=null;
+}
+</script>
+</body>
+</html>
