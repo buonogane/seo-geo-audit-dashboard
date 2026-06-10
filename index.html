@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -306,9 +307,12 @@ const ISSUE_DEFS=[
   {key:'long_title',label:'Title over 60 chars',sev:'medium',test:r=>r.titleLen>60&&r.titleLen>0},
   {key:'dup_title',label:'Duplicate page titles',sev:'medium',test:null},
   {key:'missing_desc',label:'Missing meta description',sev:'medium',test:r=>!r.desc&&String(r.status)==='200'},
+  {key:'dup_desc',label:'Duplicate meta descriptions',sev:'medium',test:null},
+  {key:'short_desc',label:'Meta desc too short (under 70 chars)',sev:'medium',test:r=>r.desc&&r.descLen>0&&r.descLen<70&&String(r.status)==='200'},
   {key:'multi_h1',label:'Multiple H1 tags',sev:'medium',test:r=>!!r.h1b},
   {key:'missing_canonical',label:'Missing canonical',sev:'medium',test:r=>!r.canonical&&r.indexable==='Indexable'},
   {key:'missing_h1',label:'Missing H1',sev:'medium',test:r=>!r.h1&&String(r.status)==='200'},
+  {key:'missing_alt',label:'Images missing alt text',sev:'medium',test:r=>r.imagesWithoutAlt>0},
   {key:'dup_h1',label:'Duplicate H1',sev:'low',test:null},
   {key:'long_desc',label:'Meta desc over 155 chars',sev:'low',test:r=>r.descLen>155},
   {key:'very_hard',label:'Readability very hard',sev:'low',test:r=>r.readability==='Very Hard'},
@@ -374,6 +378,7 @@ function processWorkbook(wb,filename){
     inlinks:parseFloat(r['Inlinks'])||0,
     crawlDepth:parseFloat(r['Crawl Depth'])||0,
     responseTime:r['Response Time']||'',
+    imagesWithoutAlt:parseFloat(r['Images without Alt Text'])||parseFloat(r['Missing Alt Text'])||0,
   }));
 
   const now=new Date();
@@ -387,6 +392,7 @@ function getMatchingRows(key,defs){
   if(!def)return[];
   if(key==='dup_title'){const c={};allRows.forEach(r=>{if(r.title)c[r.title]=(c[r.title]||0)+1;});return allRows.filter(r=>r.title&&c[r.title]>1);}
   if(key==='dup_h1'){const c={};allRows.forEach(r=>{if(r.h1)c[r.h1]=(c[r.h1]||0)+1;});return allRows.filter(r=>r.h1&&c[r.h1]>1);}
+  if(key==='dup_desc'){const c={};allRows.forEach(r=>{if(r.desc)c[r.desc]=(c[r.desc]||0)+1;});return allRows.filter(r=>r.desc&&c[r.desc]>1);}
   if(def.test)return allRows.filter(def.test);
   return[];
 }
@@ -538,11 +544,12 @@ function applyFilters(){
 }
 
 function getRowIssues(row){
-  const tc={},hc={};
-  allRows.forEach(r=>{if(r.title)tc[r.title]=(tc[r.title]||0)+1;if(r.h1)hc[r.h1]=(hc[r.h1]||0)+1;});
+  const tc={},hc={},dc={};
+  allRows.forEach(r=>{if(r.title)tc[r.title]=(tc[r.title]||0)+1;if(r.h1)hc[r.h1]=(hc[r.h1]||0)+1;if(r.desc)dc[r.desc]=(dc[r.desc]||0)+1;});
   return[...ISSUE_DEFS,...GEO_DEFS].filter(d=>{
     if(d.key==='dup_title')return row.title&&tc[row.title]>1;
     if(d.key==='dup_h1')return row.h1&&hc[row.h1]>1;
+    if(d.key==='dup_desc')return row.desc&&dc[row.desc]>1;
     if(d.test)return d.test(row);
     return false;
   }).map(d=>({label:d.label,sev:d.sev}));
