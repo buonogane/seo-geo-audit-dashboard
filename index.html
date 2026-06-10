@@ -379,6 +379,7 @@ function processWorkbook(wb,filename){
     crawlDepth:parseFloat(r['Crawl Depth'])||0,
     responseTime:r['Response Time']||'',
     imagesWithoutAlt:parseFloat(r['Images without Alt Text'])||parseFloat(r['Missing Alt Text'])||0,
+    redirectUrl:r['Redirect URL']||r['Final Redirect URL']||'',
   }));
 
   const now=new Date();
@@ -565,6 +566,7 @@ function renderDetailPanel(r){
   const kb=r.pageSize>0?(r.pageSize/1024).toFixed(1)+' KB':'—';
   const fields=[
     {label:'Full URL',value:r.url,meta:''},
+    {label:'Redirects to',value:r.redirectUrl||null,meta:'Redirect destination URL'},
     {label:'Page title',value:r.title||null,meta:r.titleLen?`${r.titleLen} chars · ${r.titlePx||'?'}px`:''},
     {label:'Title 2 (duplicate check)',value:r.title2||null,meta:''},
     {label:'Meta description',value:r.desc||null,meta:r.descLen?`${r.descLen} chars`:''},
