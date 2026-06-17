@@ -370,8 +370,10 @@ function readFile(file){
 
 function processWorkbook(wb,filename){
   let htmlSheet=null;
+  let structuredSheet=null;
   for(const name of wb.SheetNames){
-    if(name.toLowerCase().includes('html')){htmlSheet=XLSX.utils.sheet_to_json(wb.Sheets[name]);break;}
+    if(name.toLowerCase().includes('html')&&!htmlSheet){htmlSheet=XLSX.utils.sheet_to_json(wb.Sheets[name]);}
+    if((name.toLowerCase().includes('structured')||name.toLowerCase().includes('json-ld'))&&!structuredSheet){structuredSheet=XLSX.utils.sheet_to_json(wb.Sheets[name]);}
   }
   if(!htmlSheet){
     for(const name of wb.SheetNames){
@@ -380,6 +382,21 @@ function processWorkbook(wb,filename){
     }
   }
   if(!htmlSheet){alert('Could not find HTML data sheet.');return;}
+
+  // Build schema map from structured data sheet
+  const schemaMap={};
+  if(structuredSheet){
+    structuredSheet.forEach(r=>{
+      const url=r['URL']||r['Address']||'';
+      const predicate=String(r['Predicate']||'');
+      const obj=String(r['Object']||'');
+      if(url&&predicate.toLowerCase().includes('type')&&obj.includes('schema.org')){
+        if(!schemaMap[url])schemaMap[url]=new Set();
+        const parts=obj.split('/');
+        schemaMap[url].add(parts[parts.length-1]);
+      }
+    });
+  }
   allRows=htmlSheet.map(r=>({
     url:r['Address']||'',
     status:r['Status Code']||'',
@@ -400,7 +417,7 @@ function processWorkbook(wb,filename){
     flesch:r['Flesch Reading Ease Score']||'',
     textRatio:r['Text Ratio']||'',
     pageSize:parseFloat(r['Size (Bytes)'])||0,
-    schema:'',
+    schema:schemaMap[r['Address']]?Array.from(schemaMap[r['Address']]).filter(t=>!['SearchAction','EntryPoint'].includes(t)).join(', '):'',  
     inlinks:parseFloat(r['Inlinks'])||0,
     crawlDepth:parseFloat(r['Crawl Depth'])||0,
     responseTime:r['Response Time']||'',
