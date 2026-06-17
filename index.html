@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -281,6 +280,11 @@ tr.detail-row td{padding:0;background:var(--green-pale)}
         <option value="Indexable">Indexable</option>
         <option value="Non-Indexable">Non-Indexable</option>
       </select>
+      <select id="filter-schema" onchange="applyFilters()">
+        <option value="">All schema</option>
+        <option value="present">Schema present</option>
+        <option value="missing">Schema missing</option>
+      </select>
       <button class="btn-clear" id="clear-btn" onclick="clearIssueFilter()" style="display:none">× Clear filter</button>
       <span class="filter-count" id="filter-count"></span>
     </div>
@@ -526,6 +530,7 @@ function clearIssueFilter(){
   document.getElementById('search').value='';
   document.getElementById('filter-status').value='';
   document.getElementById('filter-index').value='';
+  document.getElementById('filter-schema').value='';
   filteredRows=[...allRows];
   currentPage=1;
   document.getElementById('filter-count').textContent=`${filteredRows.length} URLs`;
@@ -551,6 +556,7 @@ function applyFilters(){
   const search=document.getElementById('search').value.toLowerCase();
   const status=document.getElementById('filter-status').value;
   const index=document.getElementById('filter-index').value;
+  const schema=document.getElementById('filter-schema').value;
   filteredRows=allRows.filter(r=>{
     if(search&&!r.url.toLowerCase().includes(search))return false;
     const s=String(r.status);
@@ -559,6 +565,8 @@ function applyFilters(){
     if(status==='4xx'&&!s.startsWith('4'))return false;
     if(status==='5xx'&&!s.startsWith('5'))return false;
     if(index&&r.indexable!==index)return false;
+    if(schema==='present'&&!r.schema)return false;
+    if(schema==='missing'&&r.schema)return false;
     return true;
   });
   currentPage=1;
