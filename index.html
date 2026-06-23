@@ -728,8 +728,7 @@ function exportCSV(){
   const rows=filteredRows.map(r=>[
     r.url,r.status,r.indexable,r.title,r.titleLen,r.h1,r.h2,r.desc,r.descLen,r.canonical,r.schema,r.wordCount,r.readability,r.inlinks,r.crawlDepth,r.redirectUrl
   ]);
-  const csv=[cols,...rows].map(r=>r.map(v=>`"${String(v||'').replace(/"/g,'""')}"`).join(',')).join('
-');
+  const csv=[cols,...rows].map(function(r){return r.map(function(v){var s=String(v||'');return '"'+s.replace(/"/g,'""')+'"';}).join(',');}).join('\n');
   const blob=new Blob([csv],{type:'text/csv'});
   const a=document.createElement('a');
   a.href=URL.createObjectURL(blob);
