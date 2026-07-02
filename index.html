@@ -311,6 +311,7 @@ tr.detail-row td{padding:0;background:var(--green-pale)}
               <th>H1</th>
               <th>Canonical</th>
               <th>Schema</th>
+              <th>Meta Robots</th>
               <th>Words</th>
               <th>Issues</th>
             </tr>
@@ -347,6 +348,7 @@ const ISSUE_DEFS=[
   {key:'very_hard',label:'Readability very hard',sev:'low',test:r=>r.readability==='Very Hard'},
   {key:'hard',label:'Readability hard',sev:'low',test:r=>r.readability==='Hard'},
   {key:'redirect_3xx',label:'Internal redirects (3xx)',sev:'low',test:r=>String(r.status).startsWith('3')},
+  {key:'empty_metarobots',label:'Meta robots undetected (verify manually)',sev:'medium',test:r=>!r.metaRobots&&r.indexable==='Indexable'&&String(r.status)==='200'},
 ];
 
 const GEO_DEFS=[
@@ -658,7 +660,7 @@ function renderTable(){
   const page=filteredRows.slice(start,start+PAGE_SIZE);
   const tbody=document.getElementById('url-table');
   if(page.length===0){
-    tbody.innerHTML=`<tr><td colspan="10" class="no-data">No URLs match the current filters.</td></tr>`;
+    tbody.innerHTML=`<tr><td colspan="11" class="no-data">No URLs match the current filters.</td></tr>`;
     document.getElementById('pagination').innerHTML='';
     return;
   }
@@ -678,14 +680,22 @@ function renderTable(){
       <td><span class="${statusClass}">${r.status}</span></td>
       <td><span class="${r.indexable==='Indexable'?'idx-yes':'idx-no'}">${r.indexable==='Indexable'?'Yes':'No'}</span></td>
       <td style="font-size:12px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.title}">${r.title||'<span style="color:var(--danger);font-style:italic">missing</span>'}</td>
-      <td style="font-size:12px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.h1||'<span style="color:var(--danger);font-style:italic">'+(sc==='200'?'missing':'—')+'</span>'}</td>
+      <td style="font-size:12px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;${r.h1b?'background:var(--danger-pale);border-left:2px solid var(--danger);':''}"
+        title="${r.h1b?'Multiple H1 detected: '+r.h1+' | '+r.h1b:r.h1}">${r.h1||'<span style="color:var(--danger);font-style:italic">'+(sc==='200'?'missing':'—')+'</span>'}${r.h1b?'<span style="color:var(--danger);font-size:10px;font-weight:600;margin-left:4px">+2nd</span>':''}</td>
       <td style="font-size:12px;color:${r.canonical?'var(--success)':'var(--warning)'}">${r.canonical?'Yes':'No'}</td>
       <td style="font-size:12px;color:${r.schema?'var(--success)':'var(--danger)'}">${r.schema||'None'}</td>
+      <td style="font-size:12px" title="${r.metaRobots||'not detected'}">${
+        r.metaRobots
+          ? '<span style="color:var(--success);font-size:11px">'+r.metaRobots+'</span>'
+          : (r.indexable==='Indexable'&&String(r.status)==='200'
+              ? '<span style="color:var(--warning);font-size:13px" title="Meta robots not detected — verify manually">⚠</span>'
+              : '<span style="color:var(--gray-dark);font-size:11px">—</span>')
+      }</td>
       <td style="font-size:12px">${r.wordCount||'—'}</td>
       <td>${issues.slice(0,3).map(i=>`<span class="tag ${i.sev==='high'?'err':i.sev==='medium'?'warn':'ok'}">${i.label}</span>`).join('')}${issues.length>3?`<span class="tag" style="background:#f0f0f0;color:#666">+${issues.length-3}</span>`:''}</td>
     </tr>`;
     if(isExpanded){
-      html+=`<tr class="detail-row"><td colspan="10">${renderDetailPanel(r)}</td></tr>`;
+      html+=`<tr class="detail-row"><td colspan="11">${renderDetailPanel(r)}</td></tr>`;
     }
   });
   tbody.innerHTML=html;
